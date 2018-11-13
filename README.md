@@ -1,6 +1,8 @@
+[Fetch an external resource](fetch.md)
+
 # Introduction
 
-The payloads described in the various files need wrapping to put them in a JavaSscript context (unless the injection ends up already inside a JS context, which is rare). Possible ways to execute a payload are:
+The payloads described in the various files may need wrapping to put them in a JavaSscript context (unless the injection ends up already inside a JS context, which is rare). Possible ways to execute a payload are:
 
 * If injection ends up outside of an HTML tag:
   * `<script>`**_payload_**`</script>`
